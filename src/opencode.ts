@@ -22,6 +22,9 @@ interface CreateSessionResponse {
 
 interface SdkError {
   message?: string
+  data?: {
+    message?: string
+  }
 }
 
 interface SessionClient {
@@ -72,5 +75,6 @@ function extractText(response: PromptResponse): string {
 }
 
 function withSdkError(message: string, error?: SdkError): string {
-  return error?.message ? `${message}: ${error.message}` : message
+  const detail = typeof error?.message === "string" ? error.message : error?.data?.message
+  return typeof detail === "string" ? `${message}: ${detail}` : message
 }

@@ -33,7 +33,10 @@ test("runOpencodePrompt surfaces session creation SDK errors and closes the serv
       create: async () => ({
         client: {
           session: {
-            create: async () => ({ data: undefined, error: { message: "create failed" } }),
+            create: async () => ({
+              data: undefined,
+              error: { name: "BadRequestError", data: { message: "create failed" } },
+            }),
             prompt: async () => ({ data: { parts: [] } }),
           },
         },
@@ -54,7 +57,10 @@ test("runOpencodePrompt surfaces prompt SDK errors and closes the server", async
         client: {
           session: {
             create: async () => ({ data: { id: "session-1" } }),
-            prompt: async () => ({ data: undefined, error: { message: "prompt failed" } }),
+            prompt: async () => ({
+              data: undefined,
+              error: { name: "BadRequestError", data: { message: "prompt failed" } },
+            }),
           },
         },
         server: { close: () => calls.push("close") },
