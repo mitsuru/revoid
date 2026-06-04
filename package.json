@@ -1,0 +1,22 @@
+{
+  "name": "rebot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "rebot": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "dev": "bun run src/cli.ts",
+    "build": "bun build src/cli.ts --compile --outfile rebot"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "latest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}
