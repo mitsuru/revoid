@@ -23,6 +23,14 @@ bun run src/cli.ts describe --pr 123
 bun run src/cli.ts improve --base main
 ```
 
+## Help
+
+```bash
+rebot --help
+rebot review --help
+rebot --version
+```
+
 ## Build Single Binary
 
 ```bash
