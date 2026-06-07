@@ -13,11 +13,14 @@
     "build": "bun build src/cli.ts --compile --outfile rebot"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.48",
     "@opencode-ai/sdk": "latest",
+    "ai": "^6.0.197",
     "commander": "^15.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/json-schema": "^7.0.15",
     "typescript": "latest"
   }
 }
