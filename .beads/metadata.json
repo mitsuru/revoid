@@ -2,6 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "embedded",
-  "dolt_database": "rebot",
+  "dolt_database": "revoid",
   "project_id": "ae3e9a51-6bdd-4bfc-9050-a88d9581537f"
 }
