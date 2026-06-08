@@ -34,13 +34,28 @@ rebot review --help
 rebot --version
 ```
 
-## Build Single Binary
+## Build
 
 ```bash
 bun run build
 ```
 
-The build creates `./rebot`.
+Creates `dist/rebot.js` (~1.2 MB), a bundle that runs with Bun:
+
+```bash
+./dist/rebot.js --help   # or: bun dist/rebot.js --help
+```
+
+Bun is required at runtime (the CLI uses Bun APIs).
+
+### Standalone binary (optional)
+
+```bash
+bun run build:binary
+```
+
+Creates `./rebot`, a self-contained executable that needs no runtime. It is
+large (~100 MB) because it embeds the Bun runtime.
 
 ## Commands
 

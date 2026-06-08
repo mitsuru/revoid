@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "bin": {
-    "rebot": "./src/cli.ts"
+    "rebot": "./dist/rebot.js"
   },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "dev": "bun run src/cli.ts",
-    "build": "bun build src/cli.ts --compile --outfile rebot"
+    "build": "bun build src/cli.ts --target=bun --outfile dist/rebot.js && chmod +x dist/rebot.js",
+    "build:binary": "bun build src/cli.ts --compile --outfile rebot"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",

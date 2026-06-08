@@ -1,6 +1,10 @@
 [tools]
 bun = "1.3.9"
 
-[tasks.compile]
-description = "Compile rebot into a single binary"
+[tasks.build]
+description = "Bundle rebot into dist/rebot.js (requires Bun at runtime)"
 run = "bun run build"
+
+[tasks.compile]
+description = "Compile rebot into a standalone binary (~100MB, embeds the Bun runtime)"
+run = "bun run build:binary"
