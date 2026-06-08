@@ -116,11 +116,13 @@ export function renderImprove(result: ImproveResult): string {
   }
 
   for (const suggestion of result.suggestions) {
-    const lines: string[] = [`## ${suggestion.title}`]
+    const heading = suggestion.kind ? `## [${suggestion.kind}] ${suggestion.title}` : `## ${suggestion.title}`
+    const lines: string[] = [heading]
     const location = formatLocation(suggestion.file, suggestion.startLine, suggestion.endLine)
     if (location) lines.push(`**Location:** ${location}`)
     lines.push(suggestion.description)
-    if (suggestion.suggestedCode) lines.push(`\`\`\`\n${suggestion.suggestedCode}\n\`\`\``)
+    if (suggestion.existingCode) lines.push(`Current:\n\`\`\`\n${suggestion.existingCode}\n\`\`\``)
+    if (suggestion.suggestedCode) lines.push(`Suggested:\n\`\`\`\n${suggestion.suggestedCode}\n\`\`\``)
     parts.push(lines.join("\n\n"))
   }
 

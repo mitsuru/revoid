@@ -156,6 +156,27 @@ describe("renderImprove", () => {
     expect(md.toLowerCase()).toContain("no improvement")
   })
 
+  test("renders a committable before/after suggestion with its kind", () => {
+    const md = renderImprove({
+      suggestions: [
+        {
+          title: "Fix off-by-one",
+          file: "src/a.ts",
+          startLine: 10,
+          kind: "bug",
+          description: "loop misses the last element",
+          existingCode: "for (let i = 0; i < n - 1; i++)",
+          suggestedCode: "for (let i = 0; i < n; i++)",
+        },
+      ],
+    })
+
+    expect(md.toLowerCase()).toContain("bug")
+    expect(md).toContain("n - 1")
+    expect(md).toContain("n; i++")
+    expect(md).toContain("src/a.ts:10")
+  })
+
   test("omits the code fence when no suggestedCode is given", () => {
     const md = renderImprove({
       suggestions: [{ title: "Rename", description: "use a clearer name" }],

@@ -151,6 +151,33 @@ describe("improveResultSchema", () => {
 
     expect(parsed.suggestions[0]?.title).toBe("Extract constant")
   })
+
+  test("accepts committable suggestions with existing code, improved code, and kind", () => {
+    const parsed = improveResultSchema.parse({
+      suggestions: [
+        {
+          title: "Fix off-by-one",
+          file: "src/a.ts",
+          startLine: 10,
+          endLine: 10,
+          kind: "bug",
+          description: "loop misses the last element",
+          existingCode: "for (let i = 0; i < n - 1; i++)",
+          suggestedCode: "for (let i = 0; i < n; i++)",
+        },
+      ],
+    })
+
+    expect(parsed.suggestions[0]?.kind).toBe("bug")
+    expect(parsed.suggestions[0]?.existingCode).toContain("n - 1")
+  })
+
+  test("rejects an unknown improvement kind", () => {
+    const result = improveResultSchema.safeParse({
+      suggestions: [{ title: "X", description: "d", kind: "wat" }],
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("allResultSchema", () => {

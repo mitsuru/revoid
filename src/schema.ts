@@ -60,12 +60,24 @@ export const describeResultSchema = z.object({
   suggestedTestFocus: z.array(z.string()),
 })
 
+export const improvementKindSchema = z.enum([
+  "bug",
+  "enhancement",
+  "performance",
+  "maintainability",
+  "readability",
+  "best-practice",
+  "other",
+])
+
 export const improvementSchema = z.object({
   title: z.string(),
+  kind: improvementKindSchema.optional(),
   file: z.string().optional(),
   startLine: z.number().int().positive().optional(),
   endLine: z.number().int().positive().optional(),
   description: z.string(),
+  existingCode: z.string().optional(),
   suggestedCode: z.string().optional(),
 })
 

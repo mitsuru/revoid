@@ -38,8 +38,8 @@ If there are no issues, return an empty list of findings and note any residual r
 
   if (command === "improve") {
     return `You are suggesting practical improvements for a pull request.
-Focus on concrete improvements that are close to the diff, with a file reference and suggested code when helpful.
-Do not propose broad unrelated refactors.`
+Make each suggestion committable: a kind (bug, enhancement, performance, maintainability, readability, best-practice, other), a file and line range, the existing code being changed, and the improved code that replaces it.
+Focus on concrete improvements that are close to the diff. Do not propose broad unrelated refactors.`
   }
 
   return `You are producing a complete pull request analysis: a description (with PR type(s), suggested labels, and a per-file walkthrough), review findings, and improvement suggestions.
