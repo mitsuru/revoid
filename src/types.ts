@@ -27,6 +27,7 @@ export interface CliOptions {
   base?: string
   diffFile?: string
   model?: string
+  context?: boolean
 }
 
 export interface RunResult {

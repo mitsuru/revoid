@@ -81,13 +81,13 @@ test("runCli orchestrates review with PR number", async () => {
   })
 
   expect(code).toBe(0)
-  expect(seenOptions).toEqual([{ command: "review", pr: 123 }])
+  expect(seenOptions).toEqual([{ command: "review", pr: 123, context: true }])
   expect(seenCommands).toEqual(["review"])
   expect(writes).toEqual(["# Review Findings\n\nNo findings.\n"])
 })
 
-test("runCli forwards --model to analyze", async () => {
-  const seen: Array<{ model?: string } | undefined> = []
+test("runCli forwards --model to analyze and enables context by default", async () => {
+  const seen: Array<{ model?: string; context?: boolean } | undefined> = []
   const code = await runCli(["review", "--pr", "1", "--model", "gpt-5.4"], {
     collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
     analyze: async (_command, _prompt, options) => {
@@ -99,11 +99,11 @@ test("runCli forwards --model to analyze", async () => {
   })
 
   expect(code).toBe(0)
-  expect(seen).toEqual([{ model: "gpt-5.4" }])
+  expect(seen).toEqual([{ model: "gpt-5.4", context: true }])
 })
 
 test("runCli omits model when --model is not provided", async () => {
-  const seen: Array<{ model?: string } | undefined> = []
+  const seen: Array<{ model?: string; context?: boolean } | undefined> = []
   const code = await runCli(["review", "--pr", "1"], {
     collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
     analyze: async (_command, _prompt, options) => {
@@ -115,7 +115,23 @@ test("runCli omits model when --model is not provided", async () => {
   })
 
   expect(code).toBe(0)
-  expect(seen).toEqual([{}])
+  expect(seen).toEqual([{ context: true }])
+})
+
+test("runCli disables context with --no-context", async () => {
+  const seen: Array<{ model?: string; context?: boolean } | undefined> = []
+  const code = await runCli(["review", "--pr", "1", "--no-context"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    analyze: async (_command, _prompt, options) => {
+      seen.push(options)
+      return "ok"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(code).toBe(0)
+  expect(seen).toEqual([{ context: false }])
 })
 
 test("unknown options fail without invoking the model", async () => {
