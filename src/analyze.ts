@@ -1,5 +1,6 @@
 import type { ZodType } from "zod"
 import { runModelObject, type RunModelObjectDeps } from "./model"
+import { withContextGuidance } from "./prompts"
 import { renderResult } from "./render"
 import { resultSchemaFor } from "./schema"
 import { createContextTools } from "./tools"
@@ -29,7 +30,8 @@ export async function analyze(
     runDeps.tools = createContextTools(cwd ?? process.cwd())
   }
 
+  const finalPrompt = runDeps.tools ? withContextGuidance(prompt) : prompt
   const schema = resultSchemaFor(command) as ZodType
-  const result = await runModelObject(prompt, schema, runDeps)
+  const result = await runModelObject(finalPrompt, schema, runDeps)
   return renderResult(command, result)
 }

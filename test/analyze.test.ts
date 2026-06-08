@@ -68,6 +68,43 @@ test("analyze builds repository context tools from cwd by default", async () => 
   expect(Object.keys(passedTools ?? {}).sort()).toEqual(["grep", "read_file"])
 })
 
+test("analyze adds cross-cutting context guidance to the prompt when tools are on", async () => {
+  let seenPrompt = ""
+
+  await analyze("review", "review this diff", {
+    cwd: process.cwd(),
+    resolveModel: async () => ({}) as never,
+    generateText: async ({ prompt }) => {
+      seenPrompt = prompt
+      return { text: '{"findings": []}' }
+    },
+  })
+
+  expect(seenPrompt).toContain("review this diff")
+  expect(seenPrompt).toContain("read_file")
+  expect(seenPrompt).toContain("grep")
+  expect(seenPrompt.toLowerCase()).toContain("beyond the diff")
+})
+
+test("analyze omits context guidance when context is disabled", async () => {
+  let seenPrompt = ""
+
+  await analyze("review", "review this diff", {
+    context: false,
+    cwd: process.cwd(),
+    resolveModel: async () => ({}) as never,
+    generateObject: async () => {
+      throw new Error("unsupported")
+    },
+    generateText: async ({ prompt }) => {
+      seenPrompt = prompt
+      return { text: '{"findings": []}' }
+    },
+  })
+
+  expect(seenPrompt.toLowerCase()).not.toContain("beyond the diff")
+})
+
 test("analyze omits context tools when context is disabled", async () => {
   let passedTools: ToolSet | undefined = {} as ToolSet
 

@@ -1,5 +1,14 @@
 import type { NormalizedInput, RebotCommand } from "./types"
 
+export const CONTEXT_GUIDANCE = `You can inspect the repository beyond the diff with two tools:
+- read_file(path): read a repository file (callers, definitions, types, related code)
+- grep(pattern): search the repository with a regular expression
+Before concluding, use these tools to verify how the changed code is defined and used elsewhere, so findings are grounded in the surrounding code rather than the diff alone. Only report what the diff and the files you read support.`
+
+export function withContextGuidance(prompt: string): string {
+  return `${prompt}\n${CONTEXT_GUIDANCE}\n`
+}
+
 export function buildPrompt(command: RebotCommand, input: NormalizedInput): string {
   const instruction = commandInstruction(command)
   const payload = buildPayload(input)
