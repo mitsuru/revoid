@@ -322,6 +322,44 @@ test("runCli rejects --comment without --pr", async () => {
   expect(stderr.join("")).toContain("--pr")
 })
 
+test("runCli compresses an oversized diff and notes omissions", async () => {
+  let prompt = ""
+  const lines = Array.from({ length: 30 }, (_, i) => `+line ${i}`).join("\n")
+  const bigDiff =
+    `diff --git a/src/keep.ts b/src/keep.ts\n--- a/src/keep.ts\n+++ b/src/keep.ts\n@@ -0,0 +1,30 @@\n${lines}\n` +
+    `diff --git a/bun.lock b/bun.lock\n--- a/bun.lock\n+++ b/bun.lock\n@@ -0,0 +1,30 @@\n${lines}\n`
+
+  await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: bigDiff }),
+    loadConfig: async () => ({ maxDiffTokens: 20 }),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt).toContain("Omitted files")
+  expect(prompt).toContain("bun.lock")
+})
+
+test("runCli leaves a within-budget diff untouched", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "small diff" }),
+    loadConfig: async () => ({}),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt).not.toContain("Omitted files")
+})
+
 test("unknown options fail without invoking the model", async () => {
   const stderr: string[] = []
   const code = await runCli(["review", "--bogus"], {

@@ -10,6 +10,7 @@ import {
   type PostCommentResult,
   type ReviewComment,
 } from "./github"
+import { DEFAULT_MAX_DIFF_TOKENS, compressDiff, estimateTokens } from "./diff"
 import { collectInput as defaultCollectInput } from "./inputs"
 import { DEFAULT_MODEL, MODEL_ENV } from "./model"
 import { formatMarkdown } from "./output"
@@ -82,6 +83,19 @@ async function postInlineComments(
   if (comments.length === 0) return ""
   const posted = await postReview({ pr, comments })
   return ` and ${posted.count} inline comment(s)`
+}
+
+function applyDiffBudget(
+  input: NormalizedInput,
+  maxDiffTokens: number,
+): { input: NormalizedInput; note: string } {
+  if (estimateTokens(input.diff) <= maxDiffTokens) return { input, note: "" }
+
+  const { diff, omitted } = compressDiff(input.diff, maxDiffTokens)
+  const note = omitted.length
+    ? `\n\nNote: the diff exceeded the size budget and was reduced. Omitted files (not shown): ${omitted.join(", ")}.\n`
+    : ""
+  return { input: { ...input, diff }, note }
 }
 
 function resolveRunOptions(
@@ -170,8 +184,9 @@ Shared Options:
       async (options: SharedOptions) => {
         const cliOptions = normalizeCliOptions(commandConfig.name, options)
         const config = await loadConfig()
-        const input = normalizeInput(await collectInput(cliOptions))
-        const prompt = buildPrompt(cliOptions.command, input)
+        const collected = normalizeInput(await collectInput(cliOptions))
+        const { input, note } = applyDiffBudget(collected, config.maxDiffTokens ?? DEFAULT_MAX_DIFF_TOKENS)
+        const prompt = buildPrompt(cliOptions.command, input) + note
         const runOptions = resolveRunOptions(cliOptions, config, process.env)
 
         if (options.comment) {
@@ -206,8 +221,9 @@ Shared Options:
     // "review" only to gather the diff/PR input.
     const cliOptions = normalizeCliOptions("review", options)
     const config = await loadConfig()
-    const input = normalizeInput(await collectInput(cliOptions))
-    const prompt = buildAskPrompt(question, input)
+    const collected = normalizeInput(await collectInput(cliOptions))
+    const { input, note } = applyDiffBudget(collected, config.maxDiffTokens ?? DEFAULT_MAX_DIFF_TOKENS)
+    const prompt = buildAskPrompt(question, input) + note
     const runOptions = resolveRunOptions(cliOptions, config, process.env)
     const answer = await ask(prompt, runOptions)
     const output = options.json ? JSON.stringify({ answer }, null, 2) : answer

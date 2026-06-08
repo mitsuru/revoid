@@ -6,6 +6,7 @@ export const CONFIG_FILENAME = ".rebot.toml"
 export const configSchema = z.object({
   model: z.string().optional(),
   context: z.boolean().optional(),
+  maxDiffTokens: z.number().int().positive().optional(),
   guardrails: z
     .object({
       maxSteps: z.number().int().positive().optional(),

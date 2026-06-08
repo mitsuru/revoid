@@ -80,6 +80,8 @@ function isNoise(path: string): boolean {
   return NOISE_PATTERNS.some((pattern) => pattern.test(path))
 }
 
+export const DEFAULT_MAX_DIFF_TOKENS = 50_000
+
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4)
 }

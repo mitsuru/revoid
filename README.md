@@ -123,12 +123,17 @@ CLI flag > environment variable > config file > built-in default.
 ```toml
 model = "go/deepseek-v4-pro"
 context = true
+maxDiffTokens = 50000  # large diffs are reduced to fit this budget
 
 [guardrails]
 maxSteps = 8
 timeoutMs = 120000
 maxOutputTokens = 8192
 ```
+
+Diffs larger than `maxDiffTokens` are reduced before review: noise files
+(lockfiles, build output, snapshots) are dropped first, then remaining files are
+kept until the budget is reached, and the omitted files are noted in the prompt.
 
 ## Output
 

@@ -13,6 +13,11 @@ describe("loadConfig", () => {
     expect(cfg.guardrails?.maxSteps).toBe(5)
   })
 
+  test("parses maxDiffTokens", async () => {
+    const cfg = await loadConfig({ readConfigFile: async () => "maxDiffTokens = 12000\n" })
+    expect(cfg.maxDiffTokens).toBe(12000)
+  })
+
   test("returns an empty config when the file is absent", async () => {
     const cfg = await loadConfig({ readConfigFile: async () => undefined })
     expect(cfg).toEqual({})
