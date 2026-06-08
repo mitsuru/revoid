@@ -40,6 +40,60 @@ export function commentableLines(diff: string): Map<string, Set<number>> {
   return result
 }
 
+export interface DiffFile {
+  path: string
+  patch: string
+  added: number
+  removed: number
+}
+
+export function parseDiffFiles(diff: string): DiffFile[] {
+  const lines = diff.split("\n")
+  const files: DiffFile[] = []
+  let block: string[] = []
+
+  const flush = () => {
+    if (block.length === 0) return
+    files.push(toDiffFile(block))
+    block = []
+  }
+
+  for (const line of lines) {
+    if (line.startsWith("diff --git ")) flush()
+    if (line.startsWith("diff --git ") || block.length > 0) block.push(line)
+  }
+  flush()
+
+  return files
+}
+
+function toDiffFile(block: string[]): DiffFile {
+  let path = ""
+  let added = 0
+  let removed = 0
+
+  for (const line of block) {
+    if (line.startsWith("+++ ")) {
+      const newPath = parseNewPath(line)
+      if (newPath) path = newPath
+    } else if (line.startsWith("--- ")) {
+      const oldPath = line.slice(4).trim().replace(/^a\//, "")
+      if (!path && oldPath !== "/dev/null") path = oldPath
+    } else if (line.startsWith("+")) {
+      added++
+    } else if (line.startsWith("-")) {
+      removed++
+    }
+  }
+
+  if (!path) {
+    const header = block[0]?.match(/ b\/(.+)$/)
+    if (header?.[1]) path = header[1]
+  }
+
+  return { path, patch: `${block.join("\n")}\n`, added, removed }
+}
+
 function parseNewPath(line: string): string | undefined {
   const raw = line.slice(4).trim()
   if (raw === "/dev/null") return undefined
