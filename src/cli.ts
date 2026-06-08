@@ -3,6 +3,7 @@ import { Command, CommanderError, InvalidArgumentError } from "commander"
 import { analyze as defaultAnalyze } from "./analyze"
 import { ask as defaultAsk } from "./ask"
 import { loadConfig as defaultLoadConfig, type RebotConfig } from "./config"
+import { postComment as defaultPostComment, type PostCommentResult } from "./github"
 import { collectInput as defaultCollectInput } from "./inputs"
 import { DEFAULT_MODEL, MODEL_ENV } from "./model"
 import { formatMarkdown } from "./output"
@@ -20,6 +21,7 @@ interface RunCliDeps {
   analyze?: (command: RebotCommand, prompt: string, options?: RunOptions) => Promise<string>
   ask?: (prompt: string, options?: RunOptions) => Promise<string>
   loadConfig?: () => Promise<RebotConfig>
+  postComment?: (opts: { pr: number; command: string; body: string }) => Promise<PostCommentResult>
   writeStdout?: (text: string) => void
   writeStderr?: (text: string) => void
   writeFile?: (path: string, content: string) => Promise<void>
@@ -42,6 +44,7 @@ interface SharedOptions {
   context?: boolean
   json?: boolean
   output?: string
+  comment?: boolean
 }
 
 function addSharedOptions(command: Command): Command {
@@ -53,6 +56,7 @@ function addSharedOptions(command: Command): Command {
     .option("--no-context", "disable repository context tools (read_file/grep)")
     .option("--json", "output raw JSON instead of Markdown")
     .option("--output <file>", "write output to a file instead of stdout")
+    .option("--comment", "post the result as a PR comment (requires --pr)")
 }
 
 function resolveRunOptions(
@@ -87,6 +91,7 @@ export function createProgram(deps: RunCliDeps = {}): Command {
   const analyze = deps.analyze ?? defaultAnalyze
   const ask = deps.ask ?? defaultAsk
   const loadConfig = deps.loadConfig ?? defaultLoadConfig
+  const postComment = deps.postComment ?? ((opts) => defaultPostComment(opts))
   const writeStdout = deps.writeStdout ?? ((text: string) => process.stdout.write(text))
   const writeStderr = deps.writeStderr ?? ((text: string) => process.stderr.write(text))
   const writeFile = deps.writeFile ?? (async (path: string, content: string) => void (await Bun.write(path, content)))
@@ -95,6 +100,23 @@ export function createProgram(deps: RunCliDeps = {}): Command {
     const final = formatMarkdown(content)
     if (output) await writeFile(output, final)
     else writeStdout(final)
+  }
+
+  const deliver = async (
+    command: string,
+    content: string,
+    cliOptions: CliOptions,
+    options: SharedOptions,
+  ): Promise<void> => {
+    if (options.comment) {
+      if (cliOptions.pr === undefined) throw new Error("--comment requires --pr")
+      const result = await postComment({ pr: cliOptions.pr, command, body: content })
+      writeStdout(
+        `Posted ${command} comment to PR #${cliOptions.pr} (${result.action})${result.url ? `: ${result.url}` : ""}\n`,
+      )
+      return
+    }
+    await emit(content, options.output)
   }
 
   const program = new Command()
@@ -127,7 +149,7 @@ Shared Options:
         const runOptions = resolveRunOptions(cliOptions, config, process.env)
         if (options.json) runOptions.format = "json"
         const output = await analyze(cliOptions.command, prompt, runOptions)
-        await emit(output, options.output)
+        await deliver(cliOptions.command, output, cliOptions, options)
       },
     )
   }
@@ -147,7 +169,7 @@ Shared Options:
     const runOptions = resolveRunOptions(cliOptions, config, process.env)
     const answer = await ask(prompt, runOptions)
     const output = options.json ? JSON.stringify({ answer }, null, 2) : answer
-    await emit(output, options.output)
+    await deliver("ask", output, cliOptions, options)
   })
 
   return program

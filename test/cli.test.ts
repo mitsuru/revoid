@@ -246,6 +246,46 @@ test("runCli wraps ask output as JSON with --json", async () => {
   expect(parsed.answer).toBe("because reasons")
 })
 
+test("runCli posts a PR comment with --comment", async () => {
+  const posted: Array<{ pr: number; command: string; body: string }> = []
+  const stdout: string[] = []
+  const code = await runCli(["review", "--pr", "7", "--comment"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    analyze: async () => "# Review Findings\n\nNo findings.",
+    postComment: async (opts) => {
+      posted.push(opts)
+      return { action: "created", id: 1, url: "https://x/1" }
+    },
+    writeStdout: (text) => stdout.push(text),
+    writeStderr: () => undefined,
+  })
+
+  expect(code).toBe(0)
+  expect(posted).toHaveLength(1)
+  expect(posted[0]).toEqual({ pr: 7, command: "review", body: "# Review Findings\n\nNo findings." })
+  expect(stdout.join("")).toContain("PR #7")
+  expect(stdout.join("")).toContain("created")
+})
+
+test("runCli rejects --comment without --pr", async () => {
+  const stderr: string[] = []
+  let posted = false
+  const code = await runCli(["review", "--diff-file", "x.patch", "--comment"], {
+    collectInput: async (options) => ({ command: options.command, source: "diff-file", diff: "diff" }),
+    analyze: async () => "out",
+    postComment: async () => {
+      posted = true
+      return { action: "created", id: 1 }
+    },
+    writeStdout: () => undefined,
+    writeStderr: (text) => stderr.push(text),
+  })
+
+  expect(code).toBe(1)
+  expect(posted).toBe(false)
+  expect(stderr.join("")).toContain("--pr")
+})
+
 test("unknown options fail without invoking the model", async () => {
   const stderr: string[] = []
   const code = await runCli(["review", "--bogus"], {
