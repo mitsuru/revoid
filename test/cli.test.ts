@@ -134,6 +134,50 @@ test("runCli disables context with --no-context", async () => {
   expect(seen).toEqual([{ context: false }])
 })
 
+test("runCli applies config defaults for model, context, and guardrails", async () => {
+  let seen: unknown
+  const code = await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({
+      model: "go/deepseek-v4-pro",
+      context: false,
+      guardrails: { maxSteps: 3, timeoutMs: 1000, maxOutputTokens: 500 },
+    }),
+    analyze: async (_command, _prompt, options) => {
+      seen = options
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(code).toBe(0)
+  expect(seen).toEqual({
+    model: "go/deepseek-v4-pro",
+    context: false,
+    maxSteps: 3,
+    timeoutMs: 1000,
+    maxOutputTokens: 500,
+  })
+})
+
+test("runCli lets CLI flags override config", async () => {
+  let seen: unknown
+  const code = await runCli(["review", "--pr", "1", "--model", "gpt-5.4", "--no-context"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({ model: "go/deepseek-v4-pro", context: true }),
+    analyze: async (_command, _prompt, options) => {
+      seen = options
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(code).toBe(0)
+  expect(seen).toEqual({ model: "gpt-5.4", context: false })
+})
+
 test("runCli runs ask with a question and forwards options", async () => {
   const seen: { prompt?: string; options?: { model?: string; context?: boolean } | undefined } = {}
   const writes: string[] = []

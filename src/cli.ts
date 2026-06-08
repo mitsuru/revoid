@@ -2,6 +2,7 @@
 import { Command, CommanderError, InvalidArgumentError } from "commander"
 import { analyze as defaultAnalyze } from "./analyze"
 import { ask as defaultAsk } from "./ask"
+import { loadConfig as defaultLoadConfig, type RebotConfig } from "./config"
 import { collectInput as defaultCollectInput } from "./inputs"
 import { DEFAULT_MODEL, MODEL_ENV } from "./model"
 import { formatMarkdown } from "./output"
@@ -16,14 +17,19 @@ type RunCliInput = Omit<NormalizedInput, "base" | "diffFile" | "pr"> & {
 
 interface RunCliDeps {
   collectInput?: (options: CliOptions) => Promise<RunCliInput>
-  analyze?: (
-    command: RebotCommand,
-    prompt: string,
-    options?: { model?: string; context?: boolean },
-  ) => Promise<string>
-  ask?: (prompt: string, options?: { model?: string; context?: boolean }) => Promise<string>
+  analyze?: (command: RebotCommand, prompt: string, options?: RunOptions) => Promise<string>
+  ask?: (prompt: string, options?: RunOptions) => Promise<string>
+  loadConfig?: () => Promise<RebotConfig>
   writeStdout?: (text: string) => void
   writeStderr?: (text: string) => void
+}
+
+interface RunOptions {
+  model?: string
+  context?: boolean
+  maxSteps?: number
+  timeoutMs?: number
+  maxOutputTokens?: number
 }
 
 interface SharedOptions {
@@ -43,11 +49,22 @@ function addSharedOptions(command: Command): Command {
     .option("--no-context", "disable repository context tools (read_file/grep)")
 }
 
-function modelAnalyzeOptions(cliOptions: CliOptions): { model?: string; context?: boolean } {
-  return {
-    ...(cliOptions.model ? { model: cliOptions.model } : {}),
-    context: cliOptions.context ?? true,
-  }
+function resolveRunOptions(
+  cliOptions: CliOptions,
+  config: RebotConfig,
+  env: Record<string, string | undefined>,
+): RunOptions {
+  const envModel = env[MODEL_ENV]?.trim() || undefined
+  const model = cliOptions.model ?? envModel ?? config.model
+  const context = cliOptions.context === false ? false : (config.context ?? true)
+
+  const options: RunOptions = { context }
+  if (model) options.model = model
+  const guardrails = config.guardrails ?? {}
+  if (guardrails.maxSteps !== undefined) options.maxSteps = guardrails.maxSteps
+  if (guardrails.timeoutMs !== undefined) options.timeoutMs = guardrails.timeoutMs
+  if (guardrails.maxOutputTokens !== undefined) options.maxOutputTokens = guardrails.maxOutputTokens
+  return options
 }
 
 const commands: Array<{ name: RebotCommand; description: string }> = [
@@ -63,6 +80,7 @@ export function createProgram(deps: RunCliDeps = {}): Command {
   const collectInput = deps.collectInput ?? defaultCollectInput
   const analyze = deps.analyze ?? defaultAnalyze
   const ask = deps.ask ?? defaultAsk
+  const loadConfig = deps.loadConfig ?? defaultLoadConfig
   const writeStdout = deps.writeStdout ?? ((text: string) => process.stdout.write(text))
   const writeStderr = deps.writeStderr ?? ((text: string) => process.stderr.write(text))
 
@@ -90,9 +108,11 @@ Shared Options:
     addSharedOptions(program.command(commandConfig.name).description(commandConfig.description)).action(
       async (options: SharedOptions) => {
         const cliOptions = normalizeCliOptions(commandConfig.name, options)
+        const config = await loadConfig()
         const input = normalizeInput(await collectInput(cliOptions))
         const prompt = buildPrompt(cliOptions.command, input)
-        const markdown = await analyze(cliOptions.command, prompt, modelAnalyzeOptions(cliOptions))
+        const runOptions = resolveRunOptions(cliOptions, config, process.env)
+        const markdown = await analyze(cliOptions.command, prompt, runOptions)
         writeStdout(formatMarkdown(markdown))
       },
     )
@@ -107,9 +127,11 @@ Shared Options:
     // `command` is unused for ask (free-text, not a structured command); reuse
     // "review" only to gather the diff/PR input.
     const cliOptions = normalizeCliOptions("review", options)
+    const config = await loadConfig()
     const input = normalizeInput(await collectInput(cliOptions))
     const prompt = buildAskPrompt(question, input)
-    const markdown = await ask(prompt, modelAnalyzeOptions(cliOptions))
+    const runOptions = resolveRunOptions(cliOptions, config, process.env)
+    const markdown = await ask(prompt, runOptions)
     writeStdout(formatMarkdown(markdown))
   })
 
