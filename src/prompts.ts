@@ -106,9 +106,21 @@ Avoid:
 
 Cite the exact file and line, use backticks for identifiers and paths, order findings by severity, and report the most important ones (about 10 at most).`
 
-export function buildPrompt(command: RebotCommand, input: NormalizedInput): string {
+export const MICRO_OPT_GUIDANCE = `Also include micro-optimizations as additional findings: small performance improvements such as avoiding repeated lookups or allocations, hoisting invariant work out of loops, or using more efficient built-ins or data structures. Mark them severity "low" or "info" and category "performance", and only suggest them when the benefit is clear and they do not hurt readability or correctness.`
+
+export interface BuildPromptOptions {
+  microOptimizations?: boolean
+}
+
+export function buildPrompt(
+  command: RebotCommand,
+  input: NormalizedInput,
+  options: BuildPromptOptions = {},
+): string {
   const instruction = commandInstruction(command)
-  const extras = command === "review" || command === "all" ? languageChecklist(input) : ""
+  const reviewing = command === "review" || command === "all"
+  let extras = reviewing ? languageChecklist(input) : ""
+  if (reviewing && options.microOptimizations) extras += `\n\n${MICRO_OPT_GUIDANCE}`
   const payload = buildPayload(input)
 
   return `${instruction}${extras}

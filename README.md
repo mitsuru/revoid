@@ -123,13 +123,19 @@ CLI flag > environment variable > config file > built-in default.
 ```toml
 model = "go/deepseek-v4-pro"
 context = true
-maxDiffTokens = 50000  # large diffs are reduced to fit this budget
+maxDiffTokens = 50000      # large diffs are reduced to fit this budget
+microOptimizations = false # opt in to performance micro-optimization findings
 
 [guardrails]
 maxSteps = 8
 timeoutMs = 120000
 maxOutputTokens = 8192
 ```
+
+`review`/`all` automatically add language-specific checks for the languages in
+the diff (TypeScript/JavaScript, Go, Python, Rust, Ruby). Micro-optimization
+findings are off by default; enable them with `--micro-opt` or
+`microOptimizations = true`.
 
 Diffs larger than `maxDiffTokens` are reduced before review: noise files
 (lockfiles, build output, snapshots) are dropped first, then remaining files are

@@ -66,6 +66,15 @@ test("review prompt injects Go and Python checks when both appear", () => {
   expect(prompt).toContain("mutable default")
 })
 
+test("micro-optimization guidance is opt-in", () => {
+  const off = buildPrompt("review", input)
+  expect(off.toLowerCase()).not.toContain("micro-optimization")
+
+  const on = buildPrompt("review", input, { microOptimizations: true })
+  expect(on.toLowerCase()).toContain("micro-optimization")
+  expect(on.toLowerCase()).toContain("performance")
+})
+
 test("describe prompt does not inject language checks", () => {
   const tsDiff = "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -0,0 +1,1 @@\n+const x = 1\n"
   const prompt = buildPrompt("describe", { command: "describe", source: "diff-file", diff: tsDiff })

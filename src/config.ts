@@ -7,6 +7,7 @@ export const configSchema = z.object({
   model: z.string().optional(),
   context: z.boolean().optional(),
   maxDiffTokens: z.number().int().positive().optional(),
+  microOptimizations: z.boolean().optional(),
   guardrails: z
     .object({
       maxSteps: z.number().int().positive().optional(),

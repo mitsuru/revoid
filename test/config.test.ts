@@ -18,6 +18,11 @@ describe("loadConfig", () => {
     expect(cfg.maxDiffTokens).toBe(12000)
   })
 
+  test("parses microOptimizations", async () => {
+    const cfg = await loadConfig({ readConfigFile: async () => "microOptimizations = true\n" })
+    expect(cfg.microOptimizations).toBe(true)
+  })
+
   test("returns an empty config when the file is absent", async () => {
     const cfg = await loadConfig({ readConfigFile: async () => undefined })
     expect(cfg).toEqual({})

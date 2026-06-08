@@ -55,6 +55,7 @@ interface SharedOptions {
   json?: boolean
   output?: string
   comment?: boolean
+  microOpt?: boolean
 }
 
 function addSharedOptions(command: Command): Command {
@@ -67,6 +68,7 @@ function addSharedOptions(command: Command): Command {
     .option("--json", "output raw JSON instead of Markdown")
     .option("--output <file>", "write output to a file instead of stdout")
     .option("--comment", "post the result as a PR comment (requires --pr)")
+    .option("--micro-opt", "also suggest micro-optimizations (performance nitpicks)")
 }
 
 async function postInlineComments(
@@ -186,7 +188,8 @@ Shared Options:
         const config = await loadConfig()
         const collected = normalizeInput(await collectInput(cliOptions))
         const { input, note } = applyDiffBudget(collected, config.maxDiffTokens ?? DEFAULT_MAX_DIFF_TOKENS)
-        const prompt = buildPrompt(cliOptions.command, input) + note
+        const microOptimizations = options.microOpt ?? config.microOptimizations ?? false
+        const prompt = buildPrompt(cliOptions.command, input, { microOptimizations }) + note
         const runOptions = resolveRunOptions(cliOptions, config, process.env)
 
         if (options.comment) {

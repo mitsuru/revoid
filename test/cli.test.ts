@@ -360,6 +360,54 @@ test("runCli leaves a within-budget diff untouched", async () => {
   expect(prompt).not.toContain("Omitted files")
 })
 
+test("runCli enables micro-optimizations with --micro-opt", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1", "--micro-opt"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt.toLowerCase()).toContain("micro-optimization")
+})
+
+test("runCli enables micro-optimizations from config", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({ microOptimizations: true }),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt.toLowerCase()).toContain("micro-optimization")
+})
+
+test("micro-optimizations are off by default", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt.toLowerCase()).not.toContain("micro-optimization")
+})
+
 test("unknown options fail without invoking the model", async () => {
   const stderr: string[] = []
   const code = await runCli(["review", "--bogus"], {
