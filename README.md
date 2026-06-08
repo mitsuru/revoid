@@ -48,6 +48,9 @@ The build creates `./rebot`.
 - `rebot review`: produce review findings
 - `rebot improve`: suggest improvements
 - `rebot all`: produce description, review findings, and improvements
+- `rebot changelog`: produce a changelog entry
+- `rebot labels`: suggest labels for a PR
+- `rebot ask "<question>"`: answer a question about a PR or diff
 
 ## Input Sources
 

@@ -44,8 +44,12 @@ interface ModelDeps {
   resolveModel?: ResolveModelFn
 }
 
-interface RunModelDeps extends ModelDeps {
+export interface RunModelDeps extends ModelDeps {
   generate?: GenerateFn
+  tools?: ToolSet
+  maxSteps?: number
+  timeoutMs?: number
+  maxOutputTokens?: number
 }
 
 export interface RunModelObjectDeps extends ModelDeps {
@@ -70,10 +74,17 @@ function withContext(error: unknown): Error {
 export async function runModel(prompt: string, deps: RunModelDeps = {}): Promise<RunResult> {
   const resolveModel = deps.resolveModel ?? ((id: string) => getModel(id))
   const generate = deps.generate ?? ((options) => generateText(options))
+  const limits = {
+    abortSignal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+    maxOutputTokens: deps.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+  }
+  const toolOptions = deps.tools
+    ? { tools: deps.tools, stopWhen: stepCountIs(deps.maxSteps ?? DEFAULT_MAX_STEPS) }
+    : {}
 
   try {
     const model = await resolveModel(resolveModelId(deps))
-    const result = await generate({ model, prompt })
+    const result = await generate({ model, prompt, ...limits, ...toolOptions })
     return { markdown: result.text }
   } catch (error) {
     throw withContext(error)

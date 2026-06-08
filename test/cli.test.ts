@@ -134,6 +134,26 @@ test("runCli disables context with --no-context", async () => {
   expect(seen).toEqual([{ context: false }])
 })
 
+test("runCli runs ask with a question and forwards options", async () => {
+  const seen: { prompt?: string; options?: { model?: string; context?: boolean } | undefined } = {}
+  const writes: string[] = []
+  const code = await runCli(["ask", "why is this safe?", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    ask: async (prompt, options) => {
+      seen.prompt = prompt
+      seen.options = options
+      return "answer text"
+    },
+    writeStdout: (text) => writes.push(text),
+    writeStderr: () => undefined,
+  })
+
+  expect(code).toBe(0)
+  expect(seen.prompt).toContain("why is this safe?")
+  expect(seen.options).toEqual({ context: true })
+  expect(writes.join("")).toContain("answer text")
+})
+
 test("unknown options fail without invoking the model", async () => {
   const stderr: string[] = []
   const code = await runCli(["review", "--bogus"], {

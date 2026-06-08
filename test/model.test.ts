@@ -215,6 +215,23 @@ test("runModelObject throws with context when fallback never validates", async (
   ).rejects.toThrow(/Failed to run model prompt/)
 })
 
+test("runModel passes tools and guardrails to generate", async () => {
+  let seen: { tools?: unknown; abortSignal?: unknown; maxOutputTokens?: number | undefined } = {}
+
+  await runModel("p", {
+    tools: { grep: {} } as never,
+    resolveModel: async () => ({}) as never,
+    generate: async ({ tools, abortSignal, maxOutputTokens }) => {
+      seen = { tools, abortSignal, maxOutputTokens }
+      return { text: "hi" }
+    },
+  })
+
+  expect(seen.tools).toBeDefined()
+  expect(seen.abortSignal).toBeInstanceOf(AbortSignal)
+  expect(typeof seen.maxOutputTokens).toBe("number")
+})
+
 test("runModel surfaces model errors with context", async () => {
   await expect(
     runModel("hi", {

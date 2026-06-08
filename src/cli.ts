@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 import { Command, CommanderError, InvalidArgumentError } from "commander"
 import { analyze as defaultAnalyze } from "./analyze"
+import { ask as defaultAsk } from "./ask"
 import { collectInput as defaultCollectInput } from "./inputs"
 import { DEFAULT_MODEL, MODEL_ENV } from "./model"
 import { formatMarkdown } from "./output"
-import { buildPrompt } from "./prompts"
+import { buildAskPrompt, buildPrompt } from "./prompts"
 import type { CliOptions, NormalizedInput, PullRequestMetadata, RebotCommand } from "./types"
 
 type RunCliInput = Omit<NormalizedInput, "base" | "diffFile" | "pr"> & {
@@ -20,8 +21,33 @@ interface RunCliDeps {
     prompt: string,
     options?: { model?: string; context?: boolean },
   ) => Promise<string>
+  ask?: (prompt: string, options?: { model?: string; context?: boolean }) => Promise<string>
   writeStdout?: (text: string) => void
   writeStderr?: (text: string) => void
+}
+
+interface SharedOptions {
+  diffFile?: string
+  pr?: number
+  base?: string
+  model?: string
+  context?: boolean
+}
+
+function addSharedOptions(command: Command): Command {
+  return command
+    .option("--diff-file <path>", "read diff from a file")
+    .option("--pr <number>", "read diff from a GitHub pull request", parsePositiveInteger)
+    .option("--base <ref>", "diff the current worktree against a base ref")
+    .option("--model <id>", `model id, optional go/ or zen/ prefix (default: ${DEFAULT_MODEL}; or set ${MODEL_ENV})`)
+    .option("--no-context", "disable repository context tools (read_file/grep)")
+}
+
+function modelAnalyzeOptions(cliOptions: CliOptions): { model?: string; context?: boolean } {
+  return {
+    ...(cliOptions.model ? { model: cliOptions.model } : {}),
+    context: cliOptions.context ?? true,
+  }
 }
 
 const commands: Array<{ name: RebotCommand; description: string }> = [
@@ -36,6 +62,7 @@ const commands: Array<{ name: RebotCommand; description: string }> = [
 export function createProgram(deps: RunCliDeps = {}): Command {
   const collectInput = deps.collectInput ?? defaultCollectInput
   const analyze = deps.analyze ?? defaultAnalyze
+  const ask = deps.ask ?? defaultAsk
   const writeStdout = deps.writeStdout ?? ((text: string) => process.stdout.write(text))
   const writeStderr = deps.writeStderr ?? ((text: string) => process.stderr.write(text))
 
@@ -60,33 +87,31 @@ Shared Options:
     })
 
   for (const commandConfig of commands) {
-    program
-      .command(commandConfig.name)
-      .description(commandConfig.description)
-      .option("--diff-file <path>", "read diff from a file")
-      .option("--pr <number>", "read diff from a GitHub pull request", parsePositiveInteger)
-      .option("--base <ref>", "diff the current worktree against a base ref")
-      .option("--model <id>", `model id, optional go/ or zen/ prefix (default: ${DEFAULT_MODEL}; or set ${MODEL_ENV})`)
-      .option("--no-context", "disable repository context tools (read_file/grep)")
-      .action(
-        async (options: {
-          diffFile?: string
-          pr?: number
-          base?: string
-          model?: string
-          context?: boolean
-        }) => {
-          const cliOptions = normalizeCliOptions(commandConfig.name, options)
-          const input = normalizeInput(await collectInput(cliOptions))
-          const prompt = buildPrompt(cliOptions.command, input)
-          const markdown = await analyze(cliOptions.command, prompt, {
-            ...(cliOptions.model ? { model: cliOptions.model } : {}),
-            context: cliOptions.context ?? true,
-          })
-          writeStdout(formatMarkdown(markdown))
-        },
-      )
+    addSharedOptions(program.command(commandConfig.name).description(commandConfig.description)).action(
+      async (options: SharedOptions) => {
+        const cliOptions = normalizeCliOptions(commandConfig.name, options)
+        const input = normalizeInput(await collectInput(cliOptions))
+        const prompt = buildPrompt(cliOptions.command, input)
+        const markdown = await analyze(cliOptions.command, prompt, modelAnalyzeOptions(cliOptions))
+        writeStdout(formatMarkdown(markdown))
+      },
+    )
   }
+
+  addSharedOptions(
+    program
+      .command("ask")
+      .description("answer a question about a pull request")
+      .argument("<question>", "the question to answer"),
+  ).action(async (question: string, options: SharedOptions) => {
+    // `command` is unused for ask (free-text, not a structured command); reuse
+    // "review" only to gather the diff/PR input.
+    const cliOptions = normalizeCliOptions("review", options)
+    const input = normalizeInput(await collectInput(cliOptions))
+    const prompt = buildAskPrompt(question, input)
+    const markdown = await ask(prompt, modelAnalyzeOptions(cliOptions))
+    writeStdout(formatMarkdown(markdown))
+  })
 
   return program
 }
