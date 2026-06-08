@@ -51,6 +51,15 @@ describe("renderReview", () => {
     expect(md).toContain("a.ts:5")
     expect(md).not.toContain("a.ts:5-")
   })
+
+  test("omits the location when the finding has no file", () => {
+    const md = renderReview({
+      findings: [{ title: "X", severity: "high", category: "security", description: "d" }],
+    })
+
+    expect(md).not.toContain("Location")
+    expect(md).toContain("**Category:** security")
+  })
 })
 
 describe("renderDescribe", () => {
@@ -67,6 +76,17 @@ describe("renderDescribe", () => {
     expect(md).toContain("src/math.ts")
     expect(md).toContain("uses bigint")
     expect(md).toContain("overflow")
+  })
+
+  test("marks empty sections with _None_", () => {
+    const md = renderDescribe({
+      summary: "s",
+      changedAreas: [],
+      notableDetails: [],
+      suggestedTestFocus: [],
+    })
+
+    expect(md).toContain("_None_")
   })
 })
 
@@ -92,6 +112,15 @@ describe("renderImprove", () => {
   test("states when there are no suggestions", () => {
     const md = renderImprove({ suggestions: [] })
     expect(md.toLowerCase()).toContain("no improvement")
+  })
+
+  test("omits the code fence when no suggestedCode is given", () => {
+    const md = renderImprove({
+      suggestions: [{ title: "Rename", description: "use a clearer name" }],
+    })
+
+    expect(md).toContain("Rename")
+    expect(md).not.toContain("```")
   })
 })
 

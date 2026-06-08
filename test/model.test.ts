@@ -103,6 +103,18 @@ test("runModelObject falls back to schema-in-prompt when native is unsupported",
   expect(textPrompt).toContain("JSON")
 })
 
+test("runModelObject strips markdown code fences in the fallback path", async () => {
+  const obj = await runModelObject("p", z.object({ ok: z.boolean() }), {
+    resolveModel: async () => ({}) as never,
+    generateObject: async () => {
+      throw new Error("unsupported")
+    },
+    generateText: async () => ({ text: '```json\n{"ok": true}\n```' }),
+  })
+
+  expect(obj).toEqual({ ok: true })
+})
+
 test("runModelObject repairs once when the first fallback response is invalid", async () => {
   const texts = ["not json at all", '{"ok": true}']
   let call = 0
