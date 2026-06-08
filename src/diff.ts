@@ -67,6 +67,72 @@ export function parseDiffFiles(diff: string): DiffFile[] {
   return files
 }
 
+const NOISE_PATTERNS: RegExp[] = [
+  /(^|\/)(package-lock\.json|bun\.lock|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|go\.sum|composer\.lock|Gemfile\.lock|poetry\.lock)$/,
+  /(^|\/)(dist|build|vendor|node_modules)\//,
+  /\.min\.(js|css)$/,
+  /\.map$/,
+  /(^|\/)(__snapshots__|snapshots?)\//,
+  /\.snap$/,
+]
+
+function isNoise(path: string): boolean {
+  return NOISE_PATTERNS.some((pattern) => pattern.test(path))
+}
+
+export function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
+export interface CompressedDiff {
+  diff: string
+  omitted: string[]
+}
+
+/**
+ * Fits a diff within a token budget: drops noise files (lockfiles, build
+ * output, snapshots), then greedily keeps remaining files in order until the
+ * budget is reached. Returns the reduced diff and the list of omitted paths.
+ */
+export function compressDiff(diff: string, maxTokens: number): CompressedDiff {
+  const files = parseDiffFiles(diff)
+  if (files.length === 0) return { diff, omitted: [] }
+
+  const omitted: string[] = []
+  const kept: DiffFile[] = []
+  for (const file of files) {
+    if (isNoise(file.path)) omitted.push(file.path)
+    else kept.push(file)
+  }
+
+  const selected: DiffFile[] = []
+  let tokens = 0
+  for (const file of kept) {
+    const cost = estimateTokens(file.patch)
+    if (tokens + cost <= maxTokens) {
+      selected.push(file)
+      tokens += cost
+    } else {
+      omitted.push(file.path)
+    }
+  }
+
+  if (selected.length === 0 && kept[0]) {
+    const first = kept[0]
+    selected.push({ ...first, patch: truncatePatch(first.patch, maxTokens) })
+    const index = omitted.indexOf(first.path)
+    if (index >= 0) omitted.splice(index, 1)
+  }
+
+  return { diff: selected.map((file) => file.patch).join(""), omitted }
+}
+
+function truncatePatch(patch: string, maxTokens: number): string {
+  const maxChars = maxTokens * 4
+  if (patch.length <= maxChars) return patch
+  return `${patch.slice(0, maxChars)}\n... (truncated)\n`
+}
+
 function toDiffFile(block: string[]): DiffFile {
   let path = ""
   let added = 0

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { commentableLines, parseDiffFiles } from "../src/diff"
+import { commentableLines, compressDiff, parseDiffFiles } from "../src/diff"
 
 const DIFF = `diff --git a/src/a.ts b/src/a.ts
 index 111..222 100644
@@ -71,5 +71,38 @@ deleted file mode 100644
 
   test("returns an empty array for an empty diff", () => {
     expect(parseDiffFiles("")).toEqual([])
+  })
+})
+
+function fileBlock(path: string, lines: number): string {
+  const body = Array.from({ length: lines }, (_, i) => `+line ${i}`).join("\n")
+  return `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -0,0 +1,${lines} @@\n${body}\n`
+}
+
+describe("compressDiff", () => {
+  const big = fileBlock("src/a.ts", 40) + fileBlock("src/b.ts", 40) + fileBlock("bun.lock", 40)
+
+  test("omits noise files but keeps source when within budget", () => {
+    const { diff, omitted } = compressDiff(big, 100000)
+    expect(diff).toContain("src/a.ts")
+    expect(diff).toContain("src/b.ts")
+    expect(diff).not.toContain("bun.lock")
+    expect(omitted).toContain("bun.lock")
+  })
+
+  test("drops files that do not fit the token budget", () => {
+    // budget large enough for one ~40-line file but not two
+    const oneFileTokens = Math.ceil(fileBlock("src/a.ts", 40).length / 4)
+    const { diff, omitted } = compressDiff(big, oneFileTokens + 5)
+    expect(diff).toContain("src/a.ts")
+    expect(diff).not.toContain("src/b.ts")
+    expect(omitted).toContain("src/b.ts")
+    expect(omitted).toContain("bun.lock")
+  })
+
+  test("returns the diff unchanged when nothing is omitted and it fits", () => {
+    const small = fileBlock("src/a.ts", 3)
+    const { omitted } = compressDiff(small, 100000)
+    expect(omitted).toEqual([])
   })
 })
