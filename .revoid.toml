@@ -1,0 +1,7 @@
+# revoid configuration for this repository (used by the CI review job).
+# See `revoid config` for the full reference.
+
+[guardrails]
+# Large PRs (e.g. multi-file features) can exceed the 120s default; give the
+# model room to finish so the CI review doesn't time out.
+timeoutMs = 300000
