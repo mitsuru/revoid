@@ -12,7 +12,11 @@ import type { RunResult } from "./types"
 
 export const DEFAULT_MAX_STEPS = 8
 export const DEFAULT_TIMEOUT_MS = 120_000
-export const DEFAULT_MAX_OUTPUT_TOKENS = 8192
+// Reasoning models spend output tokens on hidden thinking before the answer; a
+// small cap leaves no room for the answer (empty output) on large diffs, and
+// truncates long structured JSON for non-reasoning models. Keep this generous —
+// it is an upper bound, so small reviews still cost little.
+export const DEFAULT_MAX_OUTPUT_TOKENS = 32_768
 
 // Go subscription model (no zen balance required). Override with --model or REVOID_MODEL.
 export const DEFAULT_MODEL = "go/deepseek-v4-pro"

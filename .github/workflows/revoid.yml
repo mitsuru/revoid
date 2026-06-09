@@ -30,4 +30,7 @@ jobs:
           REVOID_ZEN_API_KEY: ${{ secrets.REVOID_ZEN_API_KEY }}
           # gh reads GH_TOKEN automatically; the default token can comment on PRs.
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: bun run src/cli.ts review --pr ${{ github.event.pull_request.number }} --comment
+        # --no-context skips the read_file/grep tool loop: it multiplies the
+        # reasoning model's per-call latency and pushes whole-PR reviews past the
+        # timeout. The diff alone is enough for a CI gate.
+        run: bun run src/cli.ts review --pr ${{ github.event.pull_request.number }} --no-context --comment

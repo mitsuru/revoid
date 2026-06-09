@@ -90,6 +90,7 @@ test("runCli forwards --model to analyze and enables context by default", async 
   const seen: Array<{ model?: string; context?: boolean } | undefined> = []
   const code = await runCli(["review", "--pr", "1", "--model", "gpt-5.4"], {
     collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
     analyze: async (_command, _prompt, options) => {
       seen.push(options)
       return "ok"
@@ -106,6 +107,7 @@ test("runCli omits model when --model is not provided", async () => {
   const seen: Array<{ model?: string; context?: boolean } | undefined> = []
   const code = await runCli(["review", "--pr", "1"], {
     collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
     analyze: async (_command, _prompt, options) => {
       seen.push(options)
       return "ok"
@@ -122,6 +124,7 @@ test("runCli disables context with --no-context", async () => {
   const seen: Array<{ model?: string; context?: boolean } | undefined> = []
   const code = await runCli(["review", "--pr", "1", "--no-context"], {
     collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
     analyze: async (_command, _prompt, options) => {
       seen.push(options)
       return "ok"
@@ -183,6 +186,7 @@ test("runCli runs ask with a question and forwards options", async () => {
   const writes: string[] = []
   const code = await runCli(["ask", "why is this safe?", "--pr", "1"], {
     collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
     ask: async (prompt, options) => {
       seen.prompt = prompt
       seen.options = options

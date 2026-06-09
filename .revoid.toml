@@ -2,6 +2,7 @@
 # See `revoid config` for the full reference.
 
 [guardrails]
-# Large PRs (e.g. multi-file features) can exceed the 120s default; give the
-# model room to finish so the CI review doesn't time out.
+# The CI review runs the reasoning model go/deepseek-v4-pro on whole-PR diffs,
+# which can take a few minutes; raise the 120s default so it isn't cut short.
+# (maxOutputTokens is handled by the raised built-in default — see src/model.ts.)
 timeoutMs = 300000
