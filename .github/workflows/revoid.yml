@@ -30,7 +30,13 @@ jobs:
           REVOID_ZEN_API_KEY: ${{ secrets.REVOID_ZEN_API_KEY }}
           # gh reads GH_TOKEN automatically; the default token can comment on PRs.
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          # Use the fast, non-reasoning model for CI. The default reasoning model
+          # (go/deepseek-v4-pro) spends minutes on hidden thinking and a whole-PR
+          # review can exceed the underlying HTTP client's ~300s response timeout
+          # (undici headers/body timeout), which `timeoutMs` cannot extend. flash
+          # finishes well under that and is enough for a self-review comment.
+          REVOID_MODEL: zen/deepseek-v4-flash
         # --no-context skips the read_file/grep tool loop: it multiplies the
-        # reasoning model's per-call latency and pushes whole-PR reviews past the
-        # timeout. The diff alone is enough for a CI gate.
+        # model's per-call latency and pushes whole-PR reviews past the timeout.
+        # The diff alone is enough for a CI gate.
         run: bun run src/cli.ts review --pr ${{ github.event.pull_request.number }} --no-context --comment
