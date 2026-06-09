@@ -15,6 +15,9 @@ daemon.*
 # Interactions log (runtime, not versioned)
 interactions.jsonl
 
+# Issues export (synced via Dolt remote `bd dolt push/pull`, not git)
+issues.jsonl
+
 # Push state (runtime, per-machine)
 push-state.json
 

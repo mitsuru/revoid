@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url"
 import { Command, CommanderError, InvalidArgumentError } from "commander"
 import { analyze as defaultAnalyze } from "./analyze"
 import { ask as defaultAsk } from "./ask"
-import { CONFIG_FILENAME, loadConfig as defaultLoadConfig, type RevoidConfig } from "./config"
+import { CONFIG_FILENAME, languageSchema, loadConfig as defaultLoadConfig, type RevoidConfig } from "./config"
 import { configReference, configReferenceData } from "./configref"
 import {
   buildReviewComments,
@@ -58,6 +58,7 @@ interface SharedOptions {
   pr?: number
   base?: string
   model?: string
+  language?: string
   context?: boolean
   json?: boolean
   output?: string
@@ -71,6 +72,11 @@ function addSharedOptions(command: Command): Command {
     .option("--pr <number>", "read diff from a GitHub pull request", parsePositiveInteger)
     .option("--base <ref>", "diff the current worktree against a base ref")
     .option("--model <id>", `model id, optional go/ or zen/ prefix (default: ${DEFAULT_MODEL}; or set ${MODEL_ENV})`)
+    .option(
+      "--language <lang>",
+      "language for the generated prose (e.g. Japanese; default: English)",
+      parseLanguage,
+    )
     .option("--no-context", "disable repository context tools (read_file/grep)")
     .option("--json", "output raw JSON instead of Markdown")
     .option("--output <file>", "write output to a file instead of stdout")
@@ -185,6 +191,7 @@ Shared Options:
   --pr <number>       read diff from a GitHub pull request
   --base <ref>        diff the current worktree against a base ref
   --model <id>        model id, optional go/ or zen/ prefix (default: ${DEFAULT_MODEL}; or set ${MODEL_ENV})
+  --language <lang>   language for the generated prose (e.g. Japanese; default: English)
   --no-context        disable repository context tools (read_file/grep)`,
     )
     .exitOverride()
@@ -202,7 +209,12 @@ Shared Options:
         const collected = normalizeInput(await collectInput(cliOptions))
         const { input, note } = applyDiffBudget(collected, config.maxDiffTokens ?? DEFAULT_MAX_DIFF_TOKENS)
         const microOptimizations = options.microOpt ?? config.microOptimizations ?? false
-        const promptOptions = { microOptimizations, ...(config.rules ? { rules: config.rules } : {}) }
+        const language = options.language ?? config.language
+        const promptOptions = {
+          microOptimizations,
+          ...(config.rules ? { rules: config.rules } : {}),
+          ...(language ? { language } : {}),
+        }
         const prompt = buildPrompt(cliOptions.command, input, promptOptions) + note
         const runOptions = resolveRunOptions(cliOptions, config, process.env)
 
@@ -240,7 +252,8 @@ Shared Options:
     const config = await loadConfig()
     const collected = normalizeInput(await collectInput(cliOptions))
     const { input, note } = applyDiffBudget(collected, config.maxDiffTokens ?? DEFAULT_MAX_DIFF_TOKENS)
-    const prompt = buildAskPrompt(question, input) + note
+    const language = options.language ?? config.language
+    const prompt = buildAskPrompt(question, input, language ? { language } : {}) + note
     const runOptions = resolveRunOptions(cliOptions, config, process.env)
     const answer = await ask(prompt, runOptions)
     const output = options.json ? JSON.stringify({ answer }, null, 2) : answer
@@ -324,6 +337,14 @@ function parsePositiveInteger(value: string): number {
     throw new InvalidArgumentError("must be a positive integer")
   }
   return parsed
+}
+
+function parseLanguage(value: string): string {
+  const result = languageSchema.safeParse(value)
+  if (!result.success) {
+    throw new InvalidArgumentError(result.error.issues[0]?.message ?? "invalid language")
+  }
+  return result.data
 }
 
 function normalizeCliOptions(

@@ -2,7 +2,9 @@
 # See `revoid config` for the full reference.
 
 [guardrails]
-# The CI review runs the reasoning model go/deepseek-v4-pro on whole-PR diffs,
-# which can take a few minutes; raise the 120s default so it isn't cut short.
+# Raise the 120s default for local/manual runs on large diffs. Note the
+# effective ceiling is the HTTP client's ~300s response timeout (undici), which
+# this cannot extend; CI uses the faster zen/deepseek-v4-flash model to stay
+# under it (see .github/workflows/revoid.yml).
 # (maxOutputTokens is handled by the raised built-in default — see src/model.ts.)
 timeoutMs = 300000
