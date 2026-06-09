@@ -459,7 +459,7 @@ test("ask applies the response language", async () => {
     writeStderr: () => undefined,
   })
 
-  expect(prompt).toContain('Write your answer in "Japanese".')
+  expect(prompt).toContain('Write your answer in the language named "Japanese".')
 })
 
 test("response language is off by default", async () => {

@@ -135,9 +135,10 @@ export interface BuildPromptOptions {
  * severity-ordered rendering).
  */
 function languageInstruction(language: string): string {
-  // The language name is quoted so it reads as a value, not an instruction —
-  // defense in depth on top of the allowlist validation in config.ts.
-  return `\n\nWrite all natural-language prose — descriptions, summaries, and any other explanatory text — in "${language}". Keep code, identifiers, file paths, and fixed enum field values (such as severity, category, or type) in English exactly as the schema specifies; do not translate them.`
+  // The value is framed and quoted as a language *name* (not a directive) so it
+  // reads as data — defense in depth on top of the allowlist validation in
+  // config.ts.
+  return `\n\nWrite all natural-language prose — descriptions, summaries, and any other explanatory text — in the language named "${language}". Keep code, identifiers, file paths, and fixed enum field values (such as severity, category, or type) in English exactly as the schema specifies; do not translate them.`
 }
 
 function matchedRules(input: NormalizedInput, rules: CustomRule[]): string {
@@ -181,7 +182,9 @@ export function buildAskPrompt(
   options: BuildAskPromptOptions = {},
 ): string {
   const payload = buildPayload(input)
-  const language = options.language ? `\n\nWrite your answer in "${options.language}".` : ""
+  const language = options.language
+    ? `\n\nWrite your answer in the language named "${options.language}".`
+    : ""
 
   return `You are answering a question about a pull request.
 Answer using the diff, and the repository via tools when available. If the answer cannot be determined from the available information, say so plainly.
