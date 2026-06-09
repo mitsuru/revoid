@@ -23,6 +23,11 @@ describe("loadConfig", () => {
     expect(cfg.microOptimizations).toBe(true)
   })
 
+  test("parses language", async () => {
+    const cfg = await loadConfig({ readConfigFile: async () => 'language = "Japanese"\n' })
+    expect(cfg.language).toBe("Japanese")
+  })
+
   test("parses path-based rules", async () => {
     const cfg = await loadConfig({
       readConfigFile: async () =>

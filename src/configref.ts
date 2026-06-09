@@ -18,6 +18,7 @@ export interface ConfigReferenceData {
 }
 
 const EXAMPLE = `model = "go/deepseek-v4-pro"
+language = "Japanese"
 context = true
 maxDiffTokens = ${DEFAULT_MAX_DIFF_TOKENS}
 microOptimizations = false
@@ -41,6 +42,13 @@ export function configReferenceData(): ConfigReferenceData {
         type: "string",
         default: `${DEFAULT_MODEL}`,
         description: "Model id. Optional prefix go/ or zen/ selects the gateway (no prefix = zen).",
+      },
+      {
+        key: "language",
+        type: "string",
+        default: "English",
+        description:
+          "Language for the model's generated prose (e.g. Japanese). Enum values and code are kept as-is.",
       },
       {
         key: "context",

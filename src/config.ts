@@ -15,6 +15,7 @@ export type RevoidRule = z.infer<typeof ruleSchema>
 
 export const configSchema = z.object({
   model: z.string().optional(),
+  language: z.string().optional(),
   context: z.boolean().optional(),
   maxDiffTokens: z.number().int().positive().optional(),
   microOptimizations: z.boolean().optional(),

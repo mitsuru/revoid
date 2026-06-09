@@ -118,6 +118,24 @@ export interface CustomRule {
 export interface BuildPromptOptions {
   microOptimizations?: boolean
   rules?: CustomRule[]
+  /**
+   * Human language for the model's natural-language prose (e.g. "Japanese").
+   * `language` here means a spoken/written response language, distinct from the
+   * `Language` type above which classifies the source code being reviewed.
+   */
+  language?: string
+}
+
+/**
+ * Instruction that switches the model's prose into `language`. It must be placed
+ * in the trusted instruction region (before the untrusted JSON block) so the
+ * model does not treat it as data to ignore. The enum-preservation clause is
+ * load-bearing: the fallback path validates the JSON client-side with zod, so a
+ * translated `severity`/`category` value would fail enum validation (and break
+ * severity-ordered rendering).
+ */
+function languageInstruction(language: string): string {
+  return `\n\nWrite all natural-language prose — finding titles, descriptions, summaries, suggestions, and any other explanatory text — in ${language}. Keep code, identifiers, file paths, and fixed enum field values (such as severity and category) in English exactly as the schema specifies; do not translate them.`
 }
 
 function matchedRules(input: NormalizedInput, rules: CustomRule[]): string {
@@ -142,6 +160,7 @@ export function buildPrompt(
   let extras = reviewing ? languageChecklist(input) : ""
   if (reviewing && options.rules) extras += matchedRules(input, options.rules)
   if (reviewing && options.microOptimizations) extras += `\n\n${MICRO_OPT_GUIDANCE}`
+  if (options.language) extras += languageInstruction(options.language)
   const payload = buildPayload(input)
 
   return `${instruction}${extras}
@@ -150,13 +169,22 @@ ${untrustedInputBlock(payload)}
 `
 }
 
-export function buildAskPrompt(question: string, input: NormalizedInput): string {
+export interface BuildAskPromptOptions {
+  language?: string
+}
+
+export function buildAskPrompt(
+  question: string,
+  input: NormalizedInput,
+  options: BuildAskPromptOptions = {},
+): string {
   const payload = buildPayload(input)
+  const language = options.language ? `\n\nWrite your answer in ${options.language}.` : ""
 
   return `You are answering a question about a pull request.
 Answer using the diff, and the repository via tools when available. If the answer cannot be determined from the available information, say so plainly.
 
-Question: ${question}
+Question: ${question}${language}
 
 ${untrustedInputBlock(payload)}
 `

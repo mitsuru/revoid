@@ -412,6 +412,72 @@ test("micro-optimizations are off by default", async () => {
   expect(prompt.toLowerCase()).not.toContain("micro-optimization")
 })
 
+test("runCli applies the response language from config", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({ language: "Japanese" }),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt).toContain("Write all natural-language prose")
+  expect(prompt).toContain("Japanese")
+})
+
+test("--language overrides the config language", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1", "--language", "French"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({ language: "Japanese" }),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt).toContain("French")
+  expect(prompt).not.toContain("Japanese")
+})
+
+test("ask applies the response language", async () => {
+  let prompt = ""
+  await runCli(["ask", "What changed?", "--pr", "1", "--language", "Japanese"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
+    ask: async (p) => {
+      prompt = p
+      return "answer"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt).toContain("Write your answer in Japanese.")
+})
+
+test("response language is off by default", async () => {
+  let prompt = ""
+  await runCli(["review", "--pr", "1"], {
+    collectInput: async (options) => ({ command: options.command, source: "github-pr", diff: "diff" }),
+    loadConfig: async () => ({}),
+    analyze: async (_command, p) => {
+      prompt = p
+      return "x"
+    },
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  })
+
+  expect(prompt).not.toContain("Write all natural-language prose")
+})
+
 test("runCli config prints the configuration reference and current config", async () => {
   const stdout: string[] = []
   const code = await runCli(["config"], {

@@ -136,6 +136,7 @@ CLI flag > environment variable > config file > built-in default.
 
 ```toml
 model = "go/deepseek-v4-pro"
+language = "Japanese"      # language for the generated prose (default: English)
 context = true
 maxDiffTokens = 50000      # large diffs are reduced to fit this budget
 microOptimizations = false # opt in to performance micro-optimization findings
@@ -150,6 +151,11 @@ maxOutputTokens = 8192
 the diff (TypeScript/JavaScript, Go, Python, Rust, Ruby). Micro-optimization
 findings are off by default; enable them with `--micro-opt` or
 `microOptimizations = true`.
+
+Set `language` (or `--language <lang>`) to have revoid write its prose —
+finding descriptions, summaries, suggestions — in another language such as
+Japanese. Code, identifiers, and the fixed severity/category labels stay in
+English.
 
 Path-based rules attach review guidance to files matching a glob:
 
